@@ -54,7 +54,7 @@ classifyQA <- function(img, type = c("background", "cloud", "cirrus","snow", "wa
       if("cirrus" %in% type) cbind(is = encodeQA(cirrus = "high", sensor = sensor, legacy = legacy), becomes = 3L),
       if("snow" %in% type)   cbind(is = encodeQA(snow = "high", sensor = sensor, legacy = legacy),   becomes = 4L),
       if("water" %in% type)  cbind(is = encodeQA(water = "high", sensor = sensor, legacy = legacy),  becomes = 5L),
-      if("cloudShadow" %in% type & legacy=="collection1")  cbind(is = encodeQA(water = "high", sensor = sensor, legacy = legacy),  becomes = 6L))
+      if("cloudShadow" %in% type & legacy=="collection1")  cbind(is = encodeQA(cloudShadow = "high", sensor = sensor, legacy = legacy),  becomes = 6L))
     
     out <- .paraRasterFun(img, rasterFun = calc, args = list(fun = function(xi, na.rm = FALSE) classQA(x = xi, rcl = rclx), forcefun = TRUE), wrArgs = list(...))
     names(out) <- "QAclass"
