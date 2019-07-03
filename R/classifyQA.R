@@ -12,7 +12,7 @@
 #' @details 
 #' By default each class is queried for *high* confidence. See \link{encodeQA} for details. To return the different confidence levels per condition use \code{confLayers=TRUE}.
 #' This approach corresponds to the way LandsatLook Quality Images are produced by the USGS.
-#' @return Returns a RasterLayer with maximal five classes:
+#' @return Returns a RasterLayer with maximal six classes:
 #' \tabular{rr}{
 #' class \tab value \cr
 #' background \tab 1L \cr 
@@ -20,6 +20,7 @@
 #' cirrus \tab 3L \cr
 #' snow   \tab 4L \cr
 #' water  \tab 5L \cr 
+#' cloudShadow  \tab 6L \cr 
 #' }
 #' Values outside of these classes are returned as NA.
 #' If \code{confLayers = TRUE} then a RasterStack with one layer per condition (except 'background') is returned, whereby each layer contains the confidence level of the condition.
@@ -38,12 +39,12 @@
 #' qacs <- classifyQA(img = qa)
 #' ## Confidence levels
 #' qacs_conf <- classifyQA(img = qa, confLayers = TRUE)
-classifyQA <- function(img, type = c("background", "cloud", "cirrus","snow", "water"), confLayers = FALSE, sensor = "OLI", legacy = "collection1", ...){
+classifyQA <- function(img, type = c("background", "cloud", "cirrus","snow", "water", "cloudShadow"), confLayers = FALSE, sensor = "OLI", legacy = "collection1", ...){
     
   ## Input checks
   if(legacy == "pre_collection" & !any(sensor %in% c("OLI", "TIRS"))) stop("For argument legacy = 'pre_collection', argument sensor can only be 'OLI' or 'TIRS'.", call.=FALSE)
   
-  if(any(!type %in% c("background", "cloud", "cirrus","snow", "water")) | !length(type)) stop("type must be element of c('background', 'cloud', 'cirrus','snow', 'water')")
+  if(any(!type %in% c("background", "cloud", "cirrus","snow", "water", "cloudShadow")) | !length(type)) stop("type must be element of c('background', 'cloud', 'cirrus','snow', 'water', 'cloudShadow')")
   if(nlayers(img) != 1) stop("img should be a single RasterLayer")   
   
   if(!confLayers){
@@ -52,7 +53,8 @@ classifyQA <- function(img, type = c("background", "cloud", "cirrus","snow", "wa
       if("cloud" %in% type)  cbind(is = encodeQA(cloud = "high", sensor = sensor, legacy = legacy),  becomes = 2L),
       if("cirrus" %in% type) cbind(is = encodeQA(cirrus = "high", sensor = sensor, legacy = legacy), becomes = 3L),
       if("snow" %in% type)   cbind(is = encodeQA(snow = "high", sensor = sensor, legacy = legacy),   becomes = 4L),
-      if("water" %in% type)  cbind(is = encodeQA(water = "high", sensor = sensor, legacy = legacy),  becomes = 5L))
+      if("water" %in% type)  cbind(is = encodeQA(water = "high", sensor = sensor, legacy = legacy),  becomes = 5L),
+      if("cloudShadow" %in% type & legacy=="collection1")  cbind(is = encodeQA(water = "high", sensor = sensor, legacy = legacy),  becomes = 6L))
     
     out <- .paraRasterFun(img, rasterFun = calc, args = list(fun = function(xi, na.rm = FALSE) classQA(x = xi, rcl = rclx), forcefun = TRUE), wrArgs = list(...))
     names(out) <- "QAclass"
@@ -78,7 +80,12 @@ classifyQA <- function(img, type = c("background", "cloud", "cirrus","snow", "wa
       water = rbind(
         cbind(is = encodeQA(water = "low", sensor = sensor, legacy = legacy),  becomes = 1L),
         cbind(is = encodeQA(water = "med", sensor = sensor, legacy = legacy),  becomes = 2L),
-        cbind(is = encodeQA(water = "high", sensor = sensor, legacy = legacy),  becomes = 3L)))
+        cbind(is = encodeQA(water = "high", sensor = sensor, legacy = legacy),  becomes = 3L)),
+      
+      cloudShadow = rbind(
+        if(legacy=="collection1") cbind(is = encodeQA(cloudShadow = "low", sensor = sensor, legacy = legacy),  becomes = 1L),
+        if(legacy=="collection1") cbind(is = encodeQA(cloudShadow = "med", sensor = sensor, legacy = legacy),  becomes = 2L),
+        if(legacy=="collection1") cbind(is = encodeQA(cloudShadow = "high", sensor = sensor, legacy = legacy),  becomes = 3L)))
     
     out <- lapply(type[type != "background"], function(i){ 
       .paraRasterFun(img, rasterFun = calc, args = list(fun = function(xi, na.rm = FALSE) classQA(x = xi, rcl = rclxList[[i]]), forcefun = TRUE))
